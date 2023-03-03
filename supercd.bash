@@ -5,7 +5,7 @@
 #  $ . ./supercd.bash
 #  $ source ./supercd.bash
 #
-#
+# 
 #
 #
 # source ~/.zshrc    # or source ~/.zshrc if you're using zsh
@@ -13,7 +13,7 @@
 # Reverse list, since the lowest score is at the begining.
 DIR=$(zoxide query --list | fzf)
 if ! [[ $? -eq 0 ]]; then
-  echo "No file selected 1"
+  # echo "No file selected 1"
   return
 fi
 #echo $PATH | sed 's/:/\n:/g' 
@@ -23,14 +23,14 @@ DIRPATH=$DIR
 # If a directory was selected, cd to it
 if [ -d "$DIRPATH" ]; then
     cd "$DIRPATH"
-    echo "Current Folder is: $DIRPATH"
+    # echo "Current Folder is: $DIRPATH"
   else
     return
 fi
 # list only files in 2 directory depth. ignore git and node module files
-FILE=$(fd -H -t f -d 2 --exclude node_modules --exclude .gitignore --exclude .git | fzf --exit-0)
+FILE=$(fd -H -t f -d 2 --exclude node_modules --exclude .git | fzf --header "|| $DIRPATH ||" --exit-0)
 if ! [[ $? -eq 0 ]]; then
-  echo "No file selected"
+  # echo "No file selected"
   return
 fi
 lvim $FILE
