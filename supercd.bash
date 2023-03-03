@@ -1,21 +1,38 @@
-#!/home/uglybugly/.nix-profile/bin/zsh
-source ~/.zshrc    # or source ~/.zshrc if you're using zsh
+#!/bin/bash
+#
+# Script could be called like this two methods.
+# Directory change wil not take effect in a subshell
+#  $ . ./supercd.bash
+#  $ source ./supercd.bash
+#
+#
+#
+#
+# source ~/.zshrc    # or source ~/.zshrc if you're using zsh
 # Get the list of directories from zoxide and pass it to fzf.
 # Reverse list, since the lowest score is at the begining.
-DIR=$(z -l | tac | fzf --exit-0)
+DIR=$(zoxide query --list | fzf)
+if ! [[ $? -eq 0 ]]; then
+  echo "No file selected 1"
+  return
+fi
 #echo $PATH | sed 's/:/\n:/g' 
 # Cutt ranging score in the start of the line. A clean path is the output
-DIRPATH=$(echo $DIR | sed 's/^[[:digit:][:space:]]*//')
-
+# DIRPATH=$(echo $DIR | sed 's/^[[:digit:][:space:]]*//')
+DIRPATH=$DIR
 # If a directory was selected, cd to it
 if [ -d "$DIRPATH" ]; then
     cd "$DIRPATH"
     echo "Current Folder is: $DIRPATH"
   else
-    exit 2
+    return
 fi
 # list only files in 2 directory depth. ignore git and node module files
 FILE=$(fd -H -t f -d 2 --exclude node_modules --exclude .gitignore --exclude .git | fzf --exit-0)
+if ! [[ $? -eq 0 ]]; then
+  echo "No file selected"
+  return
+fi
 lvim $FILE
 
 
