@@ -1,30 +1,69 @@
 #!/bin/bash
-#
+# fd -apHt d -d 1 .tmux   
 # Script could be called like this two methods.
 # Directory change wil not take effect in a subshell
 #  $ . ./supercd.bash
 #  $ source ./supercd.bash
-#
-# 
-#
-#
-# source ~/.zshrc    # or source ~/.zshrc if you're using zsh
-# Get the list of directories from zoxide and pass it to fzf.
-# Reverse list, since the lowest score is at the begining.
-DIR=$(zoxide query --list | fzf)
-if ! [[ $? -eq 0 ]]; then
-  # echo "No file selected 1"
-  return
+
+if [[ -p /dev/stdin ]]; then
+   
+  echo "Script is receiving input from a pipe."
+  LIST="$(cat)"
+  STDINCOUNT=$(echo "$LIST" | wc -l) # count lines using wc 
+
+
+  if [[ "$STDINCOUNT" -gt 1 ]]; then
+      echo "The value of DIR is greater than 1. Its perfect"
+      # Do something
+  elif [[ "$STDINCOUNT" -eq 1 ]]; then
+      echo "The value of DIR is equal to 1. No ned to use dir list"
+      # Do something else
+  else
+      echo "No inputt to file list"
+      # Do something different
+      return
+  fi
+
+else    #
+  echo "Script is not receiving input from a pipe."
+
+  LIST="$(zoxide query --list)"
+
+  echo "$LIST"
+
 fi
+
+
+  # source ~/.zshrc    # or source ~/.zshrc if you're using zsh
+  # Get the list of directories from zoxide and pass it to fzf.
+  # Reverse list, since the lowest score is at the begining.
+  #
+if [[ "$STDINCOUNT" -eq 1 ]]; then
+  DIR="$LIST"
+  echo "Her er den ene katalogen: $DIR"
+else
+  DIR=$(echo $LIST | fzf)
+  if ! [[ $? -eq 0 ]]; then
+    # echo "No file selected 1"
+    return
+  fi
+fi
+
+
+
+
 #echo $PATH | sed 's/:/\n:/g' 
 # Cutt ranging score in the start of the line. A clean path is the output
 # DIRPATH=$(echo $DIR | sed 's/^[[:digit:][:space:]]*//')
-DIRPATH=$DIR
+DIRPATH="$DIR"
 # If a directory was selected, cd to it
 if [ -d "$DIRPATH" ]; then
-    cd "$DIRPATH"
-    # echo "Current Folder is: $DIRPATH"
+   echo "Current Folder is:$DIRPATH:"
+   pushd "$DIRPATH" # get errormessage when using cd
+    
+   echo "Current Folder is: $DIRPATH"
   else
+   echo "Current Folder is not a directory: $DIRPATH"
     return
 fi
 # list only files in 2 directory depth. ignore git and node module files
