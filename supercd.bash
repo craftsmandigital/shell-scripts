@@ -5,69 +5,117 @@
 #  $ . ./supercd.bash
 #  $ source ./supercd.bash
 
+
+# set -x
+
+#echo $PATH | sed 's/:/\n:/g' 
+# Cutt ranging score in the start of the line. A clean path is the output
+# DIRPATH=$(echo $DIR | sed 's/^[[:digit:][:space:]]*//')
+
+
+
+
+
+
+DEBUG=1
+
+debugText()
+{
+ if [[ "$DEBUG" -eq 1 ]]; then
+ echo "debug: $1" 
+ fi 
+}
+
+
+function checkPipedInput() {
+# return values
+# - List of values (string separated by newlines)
+# - one value (string)
+# - 0 means there is no piped inputt
+# - 1 means there is no result for the piped inputt
+  # debugText "this is the start"
+
+
 if [[ -p /dev/stdin ]]; then
    
-  echo "Script is receiving input from a pipe."
-  LIST="$(cat)"
-  STDINCOUNT=$(echo "$LIST" | wc -l) # count lines using wc 
+  # debugText "Script is receiving input from a pipe."
+  local LIST="$(cat)"
+  local STDINCOUNT=$(echo "$LIST" | wc -l) # count lines using wc 
 
 
   if [[ "$STDINCOUNT" -gt 1 ]]; then
-      echo "The value of DIR is greater than 1. Its perfect"
+    # debugText "The value of DIR is greater than 1. Its perfect"
       # Do something
+      echo "$LIST"
   elif [[ "$STDINCOUNT" -eq 1 ]]; then
-      echo "The value of DIR is equal to 1. No ned to use dir list"
-      # Do something else
+    if [ -z "$LIST" ]; then # Empty string the piped input has no value(empty string)
+      # debugText "The piped input has no value, empty string"
+      echo 1
+    else
+      # debugText "The value of DIR is equal to 1. ($LIST)() No ned to use dir list"
+      echo "$LIST"
+    fi
   else
-      echo "No inputt to file list"
+    # debugText "No inputt to file list"
       # Do something different
-      return
+      echo 1
   fi
 
 else    #
-  echo "Script is not receiving input from a pipe."
+  # debugText "Script is not receiving input from a pipe."
+  echo 0
+fi
+}
 
-  LIST="$(zoxide query --list)"
 
-  echo "$LIST"
+function getDefaultList() {
+  zoxide query --list
+}
 
+
+
+
+DIRLIST=$(checkPipedInput)
+if [[ "$DIRLIST" == "0" ]]; then
+  debugText "Script is not receiving input from a pipe."
+  DIRLIST=$(getDefaultList)
+elif [[ "$DIRLIST" == "1" ]]; then
+  echo "The value of the piped input is empty. No data to work on"
+  return 2
 fi
 
+
+debugText "Before the first picker:\n$DIRLIST"
+
+LISTCOUNT=$(echo "$DIRLIST" | wc -l) # count lines using wc 
 
   # source ~/.zshrc    # or source ~/.zshrc if you're using zsh
   # Get the list of directories from zoxide and pass it to fzf.
   # Reverse list, since the lowest score is at the begining.
   #
-if [[ "$STDINCOUNT" -eq 1 ]]; then
-  DIR="$LIST"
-  echo "Her er den ene katalogen: $DIR"
-else
-  DIR=$(echo $LIST | fzf)
+if [[ "$LISTCOUNT" -gt 1 ]]; then
+  DIRLIST=$(echo "$DIRLIST" | fzf) # count lines using wc 
   if ! [[ $? -eq 0 ]]; then
     # echo "No file selected 1"
     return
   fi
 fi
 
+debugText "after the first picker:\n$DIRLIST"
 
 
 
-#echo $PATH | sed 's/:/\n:/g' 
-# Cutt ranging score in the start of the line. A clean path is the output
-# DIRPATH=$(echo $DIR | sed 's/^[[:digit:][:space:]]*//')
-DIRPATH="$DIR"
-# If a directory was selected, cd to it
-if [ -d "$DIRPATH" ]; then
-   echo "Current Folder is:$DIRPATH:"
-   pushd "$DIRPATH" # get errormessage when using cd
-    
-   echo "Current Folder is: $DIRPATH"
-  else
-   echo "Current Folder is not a directory: $DIRPATH"
-    return
+if [ -d "$DIRLIST" ]; then
+   debugText "Changing Folder to:$DIRLIST:"
+   pushd "$DIRLIST" # get errormessage when using cd
+else
+   echo "Current Folder is not a directory: $DIRLIST"
+   return 2
 fi
+
+
 # list only files in 2 directory depth. ignore git and node module files
-FILE=$(fd -H -t f -d 2 --exclude node_modules --exclude .git | fzf --header "|| $DIRPATH ||" --exit-0)
+FILE=$(fd -H -t f -d 2 --exclude node_modules --exclude .git | fzf --header "|| $DIRLIST ||" --exit-0)
 if ! [[ $? -eq 0 ]]; then
   # echo "No file selected"
   return
