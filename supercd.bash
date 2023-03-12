@@ -17,7 +17,8 @@
 
 
 
-DEBUG=1
+# Debuging when value is other than 0
+DEBUG=0
 
 debugText()
 {
@@ -35,13 +36,11 @@ function checkPipedInput() {
 # - 1 means there is no result for the piped inputt
   # debugText "this is the start"
 
-
 if [[ -p /dev/stdin ]]; then
    
   # debugText "Script is receiving input from a pipe."
   local LIST="$(cat)"
   local STDINCOUNT=$(echo "$LIST" | wc -l) # count lines using wc 
-
 
   if [[ "$STDINCOUNT" -gt 1 ]]; then
     # debugText "The value of DIR is greater than 1. Its perfect"
@@ -73,11 +72,15 @@ function getDefaultList() {
 }
 
 
+ # The dept of folders the list chould view.
+FOLDERDEPTH=99
+
 
 
 DIRLIST=$(checkPipedInput)
 if [[ "$DIRLIST" == "0" ]]; then
   debugText "Script is not receiving input from a pipe."
+FOLDERDEPTH=2
   DIRLIST=$(getDefaultList)
 elif [[ "$DIRLIST" == "1" ]]; then
   echo "The value of the piped input is empty. No data to work on"
@@ -115,13 +118,17 @@ fi
 
 
 # list only files in 2 directory depth. ignore git and node module files
-FILE=$(fd -H -t f -d 2 --exclude node_modules --exclude .git | fzf --header "|| $DIRLIST ||" --exit-0)
+FILE=$(fd -H -t f -d $FOLDERDEPTH --exclude node_modules --exclude .git | fzf --header "|| $DIRLIST ||" --exit-0)
 if ! [[ $? -eq 0 ]]; then
   # echo "No file selected"
   return
+elif [[ $(file -bi "$FILE") == 'text/plain'* ]]; then
+  debugText "The file $FILE is a plain text file."
+  lvim $FILE
+else
+  debugText "The file $FILE is not a plain text file."
+  wslview $FILE 
 fi
-lvim $FILE
-
 
 
 
