@@ -20,6 +20,72 @@
 # Debuging when value is other than 0
 DEBUG=0
 
+function actionList ()
+{
+
+  local actionFunction="$(grep -oE '^\s*function\s+\w*__\w*' $2 | grep -oE '__\w+' | fzf)"
+  $actionFunction "$1"
+}
+
+
+
+function __openFile() {
+if [[ $(file -bi "$1") == 'text/'* ]]; then
+  debugText "The file $1 is a plain text file."
+  lvim $1
+else
+  debugText "The file $1 is not a plain text file."
+  wslview "$1" 
+fi
+}
+
+
+function __cd() {
+  local dir
+
+  if [ -d "$1" ]; then
+    dir="$1"
+  else
+    dir="$(dirname "$1")"
+  fi
+  pushd "$dir"
+}
+
+
+
+# https://github.com/phiresky/ripgrep-all#integration-with-fzf
+function __ripgrep() {
+   __cd "$1"
+	RG_PREFIX="rga --files-with-matches"
+	local file
+	file="$(
+		FZF_DEFAULT_COMMAND="$RG_PREFIX ''" \
+			fzf --sort --preview="[[ ! -z {} ]] && rga --pretty --context 5 {q} {}" \
+				--phony -q "" \
+				--bind "change:reload:$RG_PREFIX {q}" \
+				--preview-window="70%:wrap"
+	)" &&
+	echo "opening $file" &&
+  __openFile "$file"
+}
+
+
+# # https://github.com/phiresky/ripgrep-all#integration-with-fzf
+# rga-fzf() {
+# 	RG_PREFIX="rga --files-with-matches"
+# 	local file
+# 	file="$(
+# 		FZF_DEFAULT_COMMAND="$RG_PREFIX '$1'" \
+# 			fzf --sort --preview="[[ ! -z {} ]] && rga --pretty --context 5 {q} {}" \
+# 				--phony -q "$1" \
+# 				--bind "change:reload:$RG_PREFIX {q}" \
+# 				--preview-window="70%:wrap"
+# 	)" &&
+# 	echo "opening $file" &&
+# 	xdg-open "$file"
+# }
+
+
 debugText()
 {
  if [[ "$DEBUG" -eq 1 ]]; then
@@ -28,7 +94,7 @@ debugText()
 }
 
 
-function checkPipedInput() {
+function checkPipedInput () {
 # return values
 # - List of values (string separated by newlines)
 # - one value (string)
@@ -67,16 +133,14 @@ fi
 }
 
 
-function getDefaultList() {
+function getDefaultList () {
   zoxide query --list
 }
 
 
  # The dept of folders the list chould view.
 FOLDERDEPTH=99
-
-
-
+# grep -E '^[[:space:]]*function' $0 | awk '{print $2}'
 DIRLIST=$(checkPipedInput)
 if [[ "$DIRLIST" == "0" ]]; then
   debugText "Script is not receiving input from a pipe."
@@ -97,7 +161,7 @@ LISTCOUNT=$(echo "$DIRLIST" | wc -l) # count lines using wc
   # Reverse list, since the lowest score is at the begining.
   #
 if [[ "$LISTCOUNT" -gt 1 ]]; then
-  DIRLIST=$(echo "$DIRLIST" | fzf) # count lines using wc 
+  DIRLIST=$(echo "$DIRLIST" | fzf ) # count lines using wc 
   if ! [[ $? -eq 0 ]]; then
     # echo "No file selected 1"
     return
@@ -112,26 +176,24 @@ if [ -d "$DIRLIST" ]; then
    debugText "Changing Folder to:$DIRLIST:"
    pushd "$DIRLIST" # get errormessage when using cd
 else
-   echo "Current Folder is not a directory: $DIRLIST"
+   echo "Current older is not a directory: $DIRLIST"
    return 2
 fi
 
 
 # list only files in 2 directory depth. ignore git and node module files
-FILE=$(fd -H -t f -d $FOLDERDEPTH --exclude node_modules --exclude .git | fzf --header "|| $DIRLIST ||" --exit-0)
+# FILE=$(fd -H -t f -d $FOLDERDEPTH --exclude node_modules --exclude .git | fzf --header "|| $DIRLIST ||" --exit-0)
+FILE=$(fd -H -d $FOLDERDEPTH --exclude node_modules --exclude .git | fzf --header "|| $DIRLIST ||" --exit-0)
 if ! [[ $? -eq 0 ]]; then
   # echo "No file selected"
   return
-elif [[ $(file -bi "$FILE") == 'text/plain'* ]]; then
-  debugText "The file $FILE is a plain text file."
-  lvim $FILE
 else
-  debugText "The file $FILE is not a plain text file."
-  wslview $FILE 
+  # actionList "$DIRLIST/$FILE" "$0" 
+  actionList "./$FILE" "$0" 
 fi
 
 
-
+# rga --pretty --context 5
 
 
 # #!/bin/bash
